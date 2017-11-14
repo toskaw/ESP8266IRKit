@@ -45,7 +45,7 @@ Wifi環境設定後は、ブラウザでアクセスすると簡易的なコン�
 IPアドレス、ホスト名はスマホアプリで確認できます。
 
 ## 簡易コンソールの使い方
-![webconsole](https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/console.jpg)
+![webconsole](https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/console.JPG)
 
 *GET
 
