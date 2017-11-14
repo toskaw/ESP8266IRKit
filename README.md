@@ -31,8 +31,8 @@ Android, ios のIRKit対応アプリでセットアップ、ボタン登録、�
   環境に合わせてESP8266IRKit.inoの定数を変更してください。
   Espr IR赤外線ボードの場合は変更は必要ありません。
   
-*const int send_pin = 14; 赤外線出力ポート
-*const int recv_pin = 5;  赤外線入力ポート
+* const int send_pin = 14; 赤外線出力ポート
+* const int recv_pin = 5;  赤外線入力ポート
 
 ## 使い方
 
