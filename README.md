@@ -5,28 +5,28 @@ IRKit Clone on ESP8266
 
 ## これは何
 
-SWITCH SCIENCEのESPR IR 赤外線ボード<https://ssci.to/2740>でIRKit互換のAPIを実装しました。  
+SWITCH SCIENCEのESPR IR 赤外線ボード<http://ssci.to/2740>でIRKit互換のAPIを実装しました。  
 Android, ios のIRKit対応アプリでセットアップ、ボタン登録、操作が可能です。
 ポートの変更等を行えば、ESP-WROOM-02の自作ボード等でも使用可能です。
 
 ## 作り方
-1.Arduino IDE環境をセットアップ  
+### 1.Arduino IDE環境をセットアップ  
 
   ここが詳しいです。<http://trac.switch-science.com/wiki/esp_dev_arduino_ide>
 
-2.esp8266ライブラリを最新のものに更新 
+### 2.esp8266ライブラリを最新のものに更新 
 
   この辺を参考に2.4.0-rc1以上に更新してください。
   <https://www.mgo-tec.com/arduino-esp8266-latest-releases-howto>
 
   2.3.0はメモリーリークしているので数分で落ちます(^^;
 
-3.依存ライブラリーをインストール
+### 3.依存ライブラリーをインストール
 
 * [aJson](https://github.com/interactive-matter/aJson)
 * [IRremoteESP8266](https://github.com/markszabo/IRremoteESP8266)
 
-4.定数を変更
+### 4.定数を変更
 
   環境に合わせてESP8266IRKit.inoの定数を変更してください。
   Espr IR赤外線ボードの場合は変更は必要ありません。
@@ -45,7 +45,7 @@ Wifi環境設定後は、ブラウザでアクセスすると簡易的なコン�
 IPアドレス、ホスト名はスマホアプリで確認できます。
 
 ## 簡易コンソールの使い方
-![webconsole](https://raw.githubusercontent.com/toskaw/ESP8266IRKit/blob/master/console.jpg)
+![webconsole](https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/console.jpg)
 
 *GET
 
@@ -65,5 +65,6 @@ text areaの内容でIFTTTのレシピに登録するパラメータを作成し
 ## 参考にしたもの
 
 *[minlRum](https://github.com/9SQ/minIRum)
+
 *[IRKit](http://getirkit.com/)
 
