@@ -47,24 +47,24 @@ IPアドレス、ホスト名はスマホアプリで確認できます。
 ## 簡易コンソールの使い方
 ![webconsole](https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/console.JPG)
 
-*GET
+* GET
 
 GET /message動作です。
 
 学習させるリモコンのボタンを押して、GETをクリックでパラメータを取得できます
 
-*POST
+* POST
 
 POST /message動作です。text areaの内容を送信します
 
-*IFTTT PARAM
+* IFTTT PARAM
 
 text areaの内容でIFTTTのレシピに登録するパラメータを作成します。
 
 
 ## 参考にしたもの
 
-*[minlRum](https://github.com/9SQ/minIRum)
+* [minlRum](https://github.com/9SQ/minIRum)
 
-*[IRKit](http://getirkit.com/)
+* [IRKit](http://getirkit.com/)
 
