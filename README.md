@@ -61,6 +61,13 @@ POST /message動作です。text areaの内容を送信します
 
 text areaの内容でIFTTTのレシピに登録するパラメータを作成します。
 
+* ケース
+
+3Dプリンターで作成してみた。
+ABSなので出力時に101%に拡大しているので注意。
+![case]((https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/box.jpg)
+[3Dデータ/tinkercad](https://www.tinkercad.com/things/042WRSUgcFM)
+
 
 ## 参考にしたもの
 
