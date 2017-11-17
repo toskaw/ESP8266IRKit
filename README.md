@@ -65,7 +65,9 @@ text areaの内容でIFTTTのレシピに登録するパラメータを作成し
 
 3Dプリンターで作成してみた。
 ABSなので出力時に101%に拡大しているので注意。
-![case]((https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/box.jpg)
+
+![box](https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/box.jpg)
+
 [3Dデータ/tinkercad](https://www.tinkercad.com/things/042WRSUgcFM)
 
 
