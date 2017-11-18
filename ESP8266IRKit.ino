@@ -21,6 +21,8 @@
 #include <base64.h>
 #define VERSION "3.0.0.0.esp8266"
 #define HOST "http://deviceapi.getirkit.com"
+#define RECV_TIMEOUT 100U
+
 const int send_pin = 14;
 const int recv_pin = 5;
 const char WAIT_RESPONSE = 'a';
@@ -40,7 +42,7 @@ ESP8266WebServer webServer(80);
 AsyncClient polling_client;
 
 IRsend irsend(send_pin);
-IRrecv irrecv(recv_pin, 1024, 15, true);
+IRrecv irrecv(recv_pin, 1024, RECV_TIMEOUT, true);
 #define ERR_NOBODY -1
 #define ERR_FORMAT -2
 
@@ -367,7 +369,7 @@ void setup() {
     WiFi.begin(ssid, password);
     irsend.begin();
     irrecv.enableIRIn();
-    uint8 retry = 25;
+    uint8 retry = 1000;
     while (WiFi.status() != WL_CONNECTED && retry) {
       delay(200);
       Serial.print(".");
