@@ -22,6 +22,7 @@
 #define VERSION "3.0.0.0.esp8266"
 #define HOST "http://deviceapi.getirkit.com"
 #define RECV_TIMEOUT 100U
+#define RECV_BUFF 2048
 
 const int send_pin = 14;
 const int recv_pin = 5;
@@ -42,7 +43,8 @@ ESP8266WebServer webServer(80);
 AsyncClient polling_client;
 
 IRsend irsend(send_pin);
-IRrecv irrecv(recv_pin, 1024, RECV_TIMEOUT, true);
+IRrecv irrecv(recv_pin, RECV_BUFF, RECV_TIMEOUT, true);
+
 #define ERR_NOBODY -1
 #define ERR_FORMAT -2
 
@@ -57,12 +59,21 @@ int irsendMessage(String req) {
     aJsonObject* freq = aJson.getObjectItem(root, "freq");
     aJsonObject* data = aJson.getObjectItem(root, "data");
     if (freq != NULL && data != NULL) {
-      uint16_t d_size = aJson.getArraySize(data);
-      uint16_t rawData[d_size];
-      for (int i = 0; i < d_size; i++) {
-        aJsonObject* d_int = aJson.getArrayItem(data, i);
-        rawData[i] = d_int->valueint;
+      aJsonObject* node = data->child;
+      uint16_t d_size = 0;
+      while (node) {
+        d_size += 1;
+        node = node->next;       
       }
+      uint16_t rawData[d_size];
+      int i = 0;
+      node = data->child;
+      while (node)  {
+        rawData[i] = node->valueint;
+        i += 1;
+        node = node->next;
+      }
+      Serial.println(d_size);
       irsend.sendRaw(rawData, d_size, (uint16_t)freq->valueint);
       req = "";
       aJsonObject* id = aJson.getObjectItem(root, "id");
@@ -416,6 +427,7 @@ void setup() {
 
 void loop() {
   webServer.handleClient();
+
   static char url[256];
   if (gSetting.init == WAIT_RESPONSE) {
     // post_door
@@ -450,12 +462,13 @@ void loop() {
     if (irrecv.decode(&results)) {
       
       histIRcode = dumpIRcode(&results);
-      //dump(&results);
+      dump(&results);
       // post
       String body;
       body = base64::encode(histIRcode);
       sprintf(url, "%s/p?devicekey=%s&freq=%d", HOST, gSetting.devicekey, 38);
       HTTPClient client;
+      client.setTimeout(10000);
       client.begin(url);
       client.setUserAgent("IRKit");
       client.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -477,7 +490,7 @@ void loop() {
       if (status) {
         if (status == HTTP_CODE_OK) {
           String req = polling_client.getString();
-          if (polling == 0) {
+          if (polling == 0 && req.length()) {
             irsendMessage(req);
           }
           else {
