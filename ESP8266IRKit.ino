@@ -20,7 +20,7 @@
 #include <ESP8266mDNS.h>
 #include <aJSON.h>
 #include <base64.h>
-#define VERSION "3.1.0.2.esp8266"
+#define VERSION "3.1.0.3.esp8266"
 #define HOST "http://deviceapi.getirkit.com"
 #define RECV_TIMEOUT 100U
 #define RECV_BUFF 1024
@@ -82,7 +82,19 @@ int irsendMessage(String& req) {
           i += 1;
           node = node->next;
         }
-        irsend.sendRaw(rawData, d_size, (uint16_t)freq->valueint);
+        if (freq->type == aJson_Int) {
+          irsend.sendRaw(rawData, d_size, (uint16_t)freq->valueint);
+        }
+        else if (freq->type == aJson_Float) {
+          irsend.sendRaw(rawData, d_size, (uint16_t)freq->valuefloat);          
+        }
+        else {
+          // 本当はエラーだけど38決め打ち
+          irsend.sendRaw(rawData, d_size, 38);
+        }
+        Serial.println("irsend");
+        // polling suspend
+        polling = 1;
       }
       else {
         ret = ERR_FORMAT;
@@ -91,9 +103,6 @@ int irsendMessage(String& req) {
       if (id != NULL) {
         newest_message_id = id->valueint;
        }
-      Serial.println("irsend");
-      // polling suspend
-      polling = 1;
     } else {
       ret =  ERR_FORMAT;
     }
