@@ -20,7 +20,7 @@
 #include <ESP8266mDNS.h>
 #include <aJSON.h>
 #include <base64.h>
-#define VERSION "3.1.0.0.esp8266"
+#define VERSION "3.1.0.2.esp8266"
 #define HOST "http://deviceapi.getirkit.com"
 #define RECV_TIMEOUT 100U
 #define RECV_BUFF 1024
@@ -33,7 +33,7 @@ const char WAIT_RESPONSE = 'a';
 const char DONE = 'b';
 static uint32_t newest_message_id = 0;
 char localName[10] = "IRKit";
-String histIRcode;
+
 int polling = 0;
 struct CONFIG {
   char init;
@@ -141,9 +141,14 @@ void handleMessages() {
   }
   else if (webServer.method() == HTTP_GET) {
     String s = "{\"format\":\"raw\",\"freq\":38,\"data\":[";
-    s += histIRcode;
+    int length = irpacker_length(&packer_state);
+    irpacker_unpack_start(&packer_state);
+    for (int i= 0; i < length - 1; i += 1) {
+      s += irpacker_unpack(&packer_state);
+      s += ",";
+    }
+    s += irpacker_unpack(&packer_state);
     s += "]}";
-    histIRcode = "";
     webServer.send(200, "text/plain", s);
   }
 }
@@ -473,11 +478,48 @@ void loop() {
     client.end();
   }
   else if (gSetting.init == DONE) {
+    // get messages
+    sprintf(url, "%s/m?devicekey=%s&newer_than=%d", HOST, gSetting.devicekey, newest_message_id);
+    if (polling_client.connected()) {
+      int status = polling_client.handleClientLoop();
+      if (status) {
+        if (status == HTTP_CODE_OK) {
+          String req = polling_client.getString();
+          if (polling == 0 && req.length()) {
+            irsendMessage(req);
+          }
+          else {
+            polling = 0;
+            if (req && req.length()) {
+              // id 更新
+              req.toCharArray(json, JSON_BUFF);  
+              aJsonObject* root = aJson.parse(json);
+              if (root != NULL) {
+                aJsonObject* id = aJson.getObjectItem(root, "id");
+                if (id != NULL) {
+                  ::newest_message_id = id->valueint;
+                }
+                aJson.deleteItem(root);
+              }
+            }
+          }
+        }
+        polling_client.end();
+      }
+    }
+    else {
+      polling_client.begin(url);
+      polling_client.setTimeout(50 * 1000);
+      polling_client.setUserAgent("IRKit");
+      if (polling_client.AsyncGET() < 0) {
+        // 切断
+        polling_client.end();
+      }
+    }
+
     decode_results  results;
     
     if (irrecv.decode(&results)) {
-      
-      histIRcode = dumpIRcode(&results);
       //dump(&results);
       // pack
       memset( (void*)sharedbuffer, 0, sizeof(uint8_t) * SHARED_BUFFER_SIZE );
@@ -506,44 +548,6 @@ void loop() {
       irrecv.resume();
     }
   
-    // get messages
-    sprintf(url, "%s/m?devicekey=%s&newer_than=%d", HOST, gSetting.devicekey, newest_message_id);
-    if (polling_client.connected()) {
-      int status = polling_client.handleClientLoop();
-      if (status) {
-        if (status == HTTP_CODE_OK) {
-          String req = polling_client.getString();
-          if (polling == 0 && req.length()) {
-            int err = irsendMessage(req);
-          }
-          else {
-            polling = 0;
-            if (req && req.length()) {
-              // id 更新
-              req.toCharArray(json, req.length() + 1);  
-              aJsonObject* root = aJson.parse(json);
-              if (root != NULL) {
-                aJsonObject* id = aJson.getObjectItem(root, "id");
-                if (id != NULL) {
-                  ::newest_message_id = id->valueint;
-                }
-                aJson.deleteItem(root);
-              }
-            }
-          }
-        }
-        polling_client.end();
-      }
-    }
-    else {
-      polling_client.begin(url);
-      polling_client.setTimeout(50 * 1000);
-      polling_client.setUserAgent("IRKit");
-      if (polling_client.AsyncGET() < 0) {
-        // 切断
-        polling_client.end();
-      }
-    }
 
 #if 0 
     long mem = ESP.getFreeHeap();
