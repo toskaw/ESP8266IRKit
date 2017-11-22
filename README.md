@@ -9,7 +9,29 @@ SWITCH SCIENCEのESPR IR 赤外線ボード<http://ssci.to/2740>でIRKit互換�
 Android, ios のIRKit対応アプリでセットアップ、ボタン登録、操作が可能です。
 ポートの変更等を行えば、ESP-WROOM-02の自作ボード等でも使用可能です。
 
-## 作り方
+## 手っ取り早く試したい人
+
+コンパイル済みのバイナリーファイルもあっぷしました。
+以下の手順で書き込めば手っ取り早く試せます。
+
+必要なもの
+
+* ESPR IR 赤外線ボード<http://ssci.to/2740>
+* FTDI USBシリアル変換アダプタ<http://ssci.to/1032>
+* Flash Download Tools
+
+1. [binファイル](https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/ESP8266IRKit.ino.generic.bin)をダウンロード
+2. [Flash Download Tools(ESP8266 & ESP32)](http://espressif.com/en/support/download/other-tools)をダウンロード
+3. Flash Download Tools を7zip等で展開
+4. 赤外線ボードとシリアル変換アダプタを接続してボードのジャンパピンをPROGに接続、USBケーブルをパソコンにさす
+4. ESPFlashDownloadTool を起動
+5. ESP8266 Download Tool ボタンを押す
+6. ファイル、COMポートなどを設定し、STARTボタンを押す
+7. FINISHが出たら、ボードのジャンパピンを外して、電源を入れなおす
+![FlashDownloadTool](https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/flashdownload.jpg)
+
+
+## 作り方（ソースからコンパイルする方法）
 ### 1.Arduino IDE環境をセットアップ  
 
   ここが詳しいです。<http://trac.switch-science.com/wiki/esp_dev_arduino_ide>
@@ -44,6 +66,7 @@ Android, ios のIRKit対応アプリでセットアップ、ボタン登録、�
 Wifi環境設定後は、ブラウザでアクセスすると簡易的なコンソールが使用できます。
 
 IPアドレス、ホスト名はスマホアプリで確認できます。
+
 
 ## 簡易コンソールの使い方
 ![webconsole](https://raw.githubusercontent.com/toskaw/ESP8266IRKit/master/console.JPG)
