@@ -1,4 +1,5 @@
 #include "AsyncClient.h"
+#include "IrPacker.h"
 #include <EEPROM.h>
 
 #include <IRrecv.h>
@@ -22,7 +23,9 @@
 #define VERSION "3.0.0.0.esp8266"
 #define HOST "http://deviceapi.getirkit.com"
 #define RECV_TIMEOUT 100U
-#define RECV_BUFF 2048
+#define RECV_BUFF 1024
+#define JSON_BUFF 4096
+#define SHARED_BUFFER_SIZE 512
 
 const int send_pin = 14;
 const int recv_pin = 5;
@@ -38,48 +41,56 @@ struct CONFIG {
   char pass[64];
   char devicekey[32];
 };
+struct irpacker_t packer_state;
 CONFIG gSetting;
 ESP8266WebServer webServer(80);
 AsyncClient polling_client;
+char sharedbuffer[ SHARED_BUFFER_SIZE ];
 
 IRsend irsend(send_pin);
 IRrecv irrecv(recv_pin, RECV_BUFF, RECV_TIMEOUT, true);
 
 #define ERR_NOBODY -1
 #define ERR_FORMAT -2
+#define ERR_EMPTY -3
+char json[JSON_BUFF];
 
-int irsendMessage(String req) {
+int irsendMessage(String& req) {
   int ret = 0;
+  if (req.length() == 0) return ERR_EMPTY;
   irrecv.disableIRIn();
-  char json[req.length() + 1];
-  req.toCharArray(json, req.length() + 1);
-  Serial.println(req);
+  
+  req.toCharArray(json, JSON_BUFF);
+  Serial.println(json);
   aJsonObject* root = aJson.parse(json);
   if (root != NULL) {
     aJsonObject* freq = aJson.getObjectItem(root, "freq");
     aJsonObject* data = aJson.getObjectItem(root, "data");
     if (freq != NULL && data != NULL) {
       aJsonObject* node = data->child;
-      uint16_t d_size = 0;
-      while (node) {
-        d_size += 1;
-        node = node->next;       
+      if (node != NULL) {
+        uint16_t d_size = 0;
+        while (node) {
+          d_size += 1;
+          node = node->next;       
+        }
+        uint16_t rawData[d_size];
+        int i = 0;
+        node = data->child;
+        while (node)  {
+          rawData[i] = node->valueint;
+          i += 1;
+          node = node->next;
+        }
+        irsend.sendRaw(rawData, d_size, (uint16_t)freq->valueint);
       }
-      uint16_t rawData[d_size];
-      int i = 0;
-      node = data->child;
-      while (node)  {
-        rawData[i] = node->valueint;
-        i += 1;
-        node = node->next;
+      else {
+        ret = ERR_FORMAT;
       }
-      Serial.println(d_size);
-      irsend.sendRaw(rawData, d_size, (uint16_t)freq->valueint);
-      req = "";
       aJsonObject* id = aJson.getObjectItem(root, "id");
       if (id != NULL) {
         newest_message_id = id->valueint;
-      }
+       }
       Serial.println("irsend");
       // polling suspend
       polling = 1;
@@ -109,21 +120,23 @@ void handleMessages() {
     return;
   }
   if (webServer.method() == HTTP_POST) {
+    Serial.println("post");
     String req = webServer.arg(0);
-    int err = irsendMessage(req);
-    if (err == 0) {
-      webServer.send(200, "text/plain", "ok");
-    }
-    else if (err == ERR_FORMAT) {
-      webServer.send(400, "text/plain", "Invalid JSON format");
+    if (req != NULL) {
+      int err = irsendMessage(req);
+      if (err == 0) {
+        webServer.send(200, "text/plain", "ok");
+      }
+      else if (err == ERR_FORMAT) {
+        webServer.send(400, "text/plain", "Invalid JSON format");
+      }
+      else {
+        webServer.send(400, "text/plain", "No Data");
+      }
     }
     else {
-      int i = webServer.args();
-      while(i) {
-        Serial.println(webServer.arg(i));
-        Serial.println(webServer.argName(i));
-      }
-      webServer.send(400, "text/plain", "No Data");
+      Serial.println("err");
+      webServer.send(400, "text/plain", "No Data");      
     }
   }
   else if (webServer.method() == HTTP_GET) {
@@ -300,6 +313,7 @@ void APMode() {
     webServer.on("/wifi", HTTP_POST, handleWifiPost);
 }
 
+#if 0
 void dump(decode_results *results) {
   // Dumps out the decode_results structure.
   // Call this after IRrecv::decode()
@@ -353,6 +367,8 @@ void dump(decode_results *results) {
   }
   Serial.println("};");
 }
+#endif
+
 void setup() {
   Serial.begin(115200);
   Serial.println();
@@ -462,10 +478,17 @@ void loop() {
     if (irrecv.decode(&results)) {
       
       histIRcode = dumpIRcode(&results);
-      dump(&results);
+      //dump(&results);
+      // pack
+      memset( (void*)sharedbuffer, 0, sizeof(uint8_t) * SHARED_BUFFER_SIZE );
+      irpacker_init( &packer_state, (uint8_t*)sharedbuffer );
+       for (int i = 1;  i < results.rawlen;  i++) {
+        irpacker_pack(&packer_state, results.rawbuf[i] * RAWTICK);
+       }
+       irpacker_packend(&packer_state);
       // post
       String body;
-      body = base64::encode(histIRcode);
+      body = base64::encode(sharedbuffer, irpacker_length(&packer_state));
       sprintf(url, "%s/p?devicekey=%s&freq=%d", HOST, gSetting.devicekey, 38);
       HTTPClient client;
       client.setTimeout(10000);
@@ -491,21 +514,22 @@ void loop() {
         if (status == HTTP_CODE_OK) {
           String req = polling_client.getString();
           if (polling == 0 && req.length()) {
-            irsendMessage(req);
+            int err = irsendMessage(req);
           }
           else {
-            polling -= 1;
-            // id 更新
-            char json[req.length() + 1];
-            req.toCharArray(json, req.length() + 1);  
-            aJsonObject* root = aJson.parse(json);
-            if (root != NULL) {
-              aJsonObject* id = aJson.getObjectItem(root, "id");
-              if (id != NULL) {
-                ::newest_message_id = id->valueint;
+            polling = 0;
+            if (req && req.length()) {
+              // id 更新
+              req.toCharArray(json, req.length() + 1);  
+              aJsonObject* root = aJson.parse(json);
+              if (root != NULL) {
+                aJsonObject* id = aJson.getObjectItem(root, "id");
+                if (id != NULL) {
+                  ::newest_message_id = id->valueint;
+                }
+                aJson.deleteItem(root);
               }
             }
-            aJson.deleteItem(root);
           }
         }
         polling_client.end();
