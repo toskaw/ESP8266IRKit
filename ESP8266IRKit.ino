@@ -1,3 +1,19 @@
+/*
+ Copyright (C) 2017 Toshiyuki Kawashima
+  
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 2 of the License, or
+ (at your option) any later version.
+  
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+  
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include "AsyncClient.h"
 #include "IrPacker.h"
 #include <EEPROM.h>
@@ -20,7 +36,7 @@
 #include <ESP8266mDNS.h>
 #include <aJSON.h>
 #include <base64.h>
-#define VERSION "3.1.0.3.esp8266"
+#define VERSION "3.2.0.0.esp8266"
 #define HOST "http://deviceapi.getirkit.com"
 #define RECV_TIMEOUT 100U
 #define RECV_BUFF 1024
@@ -116,7 +132,7 @@ int irsendMessage(String& req) {
 
 void sendheader() {
   webServer.sendHeader("Access-Control-Allow-Origin", "*");
-  String server = "IRkit/";
+  String server = "IRKit/";
   server += VERSION;
   webServer.sendHeader("Server", server);
 }
@@ -317,6 +333,7 @@ void APMode() {
     Serial.println("softAP Start");  
     Serial.print("IP address: ");
     Serial.println(WiFi.softAPIP());
+#if 0    
     if (MDNS.begin(localName, WiFi.softAPIP())) {
       MDNS.addService("irkit", "tcp", 80);
       Serial.println("MDNS responder started.");
@@ -324,6 +341,7 @@ void APMode() {
       Serial.print(localName);
       Serial.println(".local");
     }
+#endif
     webServer.on("/wifi", HTTP_POST, handleWifiPost);
 }
 
@@ -450,7 +468,7 @@ void setup() {
  #endif
     }
   }
-  webServer.onNotFound(handleNotFound);
+  webServer.onNotFound(handleNotFound);  
   webServer.begin();
   Serial.println("Web server started.");
 }
