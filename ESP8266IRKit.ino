@@ -36,7 +36,7 @@
 #include <ESP8266mDNS.h>
 #include <aJSON.h>
 #include <base64.h>
-#define VERSION "3.2.0.1.esp8266"
+#define VERSION "3.2.0.3.esp8266"
 #define HOST "http://deviceapi.getirkit.com"
 #define RECV_TIMEOUT 100U
 #define RECV_BUFF 1024
@@ -83,6 +83,7 @@ int irsendMessage(String& req) {
   if (root != NULL) {
     aJsonObject* freq = aJson.getObjectItem(root, "freq");
     aJsonObject* data = aJson.getObjectItem(root, "data");
+    aJsonObject* id = aJson.getObjectItem(root, "id");
     if (freq != NULL && data != NULL) {
       aJsonObject* node = data->child;
       if (node != NULL) {
@@ -110,13 +111,15 @@ int irsendMessage(String& req) {
           irsend.sendRaw(rawData, d_size, 38);
         }
         Serial.println("irsend");
-        // polling suspend
-        polling = 1;
+        if (id == NULL) {
+          // polling suspend
+          polling = 1;
+        }
       }
       else {
         ret = ERR_FORMAT;
       }
-      aJsonObject* id = aJson.getObjectItem(root, "id");
+      
       if (id != NULL) {
         newest_message_id = id->valueint;
        }
@@ -550,7 +553,7 @@ void loop() {
     if (irrecv.decode(&results)) {
       //dump(&results);
       Serial.println(dumpIRcode(&results));
-      irLen = results.rawlen;
+      irLen = results.rawlen - 1;
       // pack
       memset( (void*)sharedbuffer, 0, sizeof(uint8_t) * SHARED_BUFFER_SIZE );
       irpacker_init( &packer_state, (uint8_t*)sharedbuffer );
