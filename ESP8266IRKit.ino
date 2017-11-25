@@ -36,7 +36,7 @@
 #include <ESP8266mDNS.h>
 #include <aJSON.h>
 #include <base64.h>
-#define VERSION "3.2.0.0.esp8266"
+#define VERSION "3.2.0.1.esp8266"
 #define HOST "http://deviceapi.getirkit.com"
 #define RECV_TIMEOUT 100U
 #define RECV_BUFF 1024
@@ -49,6 +49,7 @@ const char WAIT_RESPONSE = 'a';
 const char DONE = 'b';
 static uint32_t newest_message_id = 0;
 char localName[10] = "IRKit";
+uint16 irLen = 0;
 
 int polling = 0;
 struct CONFIG {
@@ -166,7 +167,7 @@ void handleMessages() {
   }
   else if (webServer.method() == HTTP_GET) {
     String s = "{\"format\":\"raw\",\"freq\":38,\"data\":[";
-    int length = irpacker_length(&packer_state);
+    int length = irLen;
     irpacker_unpack_start(&packer_state);
     for (int i= 0; i < length - 1; i += 1) {
       s += irpacker_unpack(&packer_state);
@@ -309,7 +310,7 @@ void handleWifiPost() {
   ESP.reset();
 }
 
-String dumpIRcode (decode_results *results) {
+String dumpIRcode(decode_results *results) {
   String s = "";
   for (int i = 1;  i < results->rawlen;  i++) {
     s += results->rawbuf[i] * RAWTICK;
@@ -548,6 +549,8 @@ void loop() {
     
     if (irrecv.decode(&results)) {
       //dump(&results);
+      Serial.println(dumpIRcode(&results));
+      irLen = results.rawlen;
       // pack
       memset( (void*)sharedbuffer, 0, sizeof(uint8_t) * SHARED_BUFFER_SIZE );
       irpacker_init( &packer_state, (uint8_t*)sharedbuffer );
@@ -557,7 +560,7 @@ void loop() {
        irpacker_packend(&packer_state);
       // post
       String body;
-      body = base64::encode(sharedbuffer, irpacker_length(&packer_state));
+      body = base64::encode(sharedbuffer, irpacker_safelength(&packer_state));
       sprintf(url, "%s/p?devicekey=%s&freq=%d", HOST, gSetting.devicekey, 38);
       HTTPClient client;
       client.setTimeout(10000);
@@ -567,7 +570,7 @@ void loop() {
       int code = client.POST(body);
       if (code == HTTP_CODE_OK) { 
         Serial.println("post success");
-      }
+       }
       else {
         Serial.println("post error");
       }
