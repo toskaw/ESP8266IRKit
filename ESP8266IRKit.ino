@@ -546,6 +546,7 @@ void loop() {
         // 切断
         polling_client.end();
       }
+      delay(5000); // polling interval=5s
     }
 
     decode_results  results;
