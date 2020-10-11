@@ -36,13 +36,13 @@
 #include <ESP8266mDNS.h>
 #include <aJSON.h>
 #include <base64.h>
-#define VERSION "3.2.0.3.esp8266"
+#define VERSION "3.2.0.4.esp8266"
 #define HOST "http://deviceapi.getirkit.com"
 #define RECV_TIMEOUT 100U
 #define RECV_BUFF 1024
 #define JSON_BUFF 4096
 #define SHARED_BUFFER_SIZE 512
-
+#define POLLING_INTERVAL 5000
 const int send_pin = 14;
 const int recv_pin = 5;
 const char WAIT_RESPONSE = 'a';
@@ -50,6 +50,7 @@ const char DONE = 'b';
 static uint32_t newest_message_id = 0;
 char localName[10] = "IRKit";
 uint16 irLen = 0;
+unsigned long close_time = 0;
 
 int polling = 0;
 struct CONFIG {
@@ -411,7 +412,9 @@ void setup() {
   
   EEPROM.begin(200);
   EEPROM.get<CONFIG>(0, gSetting);
- 
+  // 最初は無条件にサーバーに接続するように設定
+  close_time = millis() - POLLING_INTERVAL;
+  
   byte mac[6];
   char buf[6];
   WiFi.macAddress(mac);
@@ -479,7 +482,7 @@ void setup() {
 
 void loop() {
   webServer.handleClient();
-
+  
   static char url[256];
   if (gSetting.init == WAIT_RESPONSE) {
     // post_door
@@ -514,6 +517,9 @@ void loop() {
     if (polling_client.connected()) {
       int status = polling_client.handleClientLoop();
       if (status) {
+        Serial.print(millis());
+        Serial.print("\t:Status = ");
+        Serial.println(status);
         if (status == HTTP_CODE_OK) {
           String req = polling_client.getString();
           if (polling == 0 && req.length()) {
@@ -535,16 +541,31 @@ void loop() {
             }
           }
         }
+        Serial.print(millis());
+        Serial.println("\t: polling end");
         polling_client.end();
+        // 次回接続用に時間を記録
+        close_time = millis();
       }
     }
     else {
-      polling_client.begin(url);
-      polling_client.setTimeout(50 * 1000);
-      polling_client.setUserAgent("IRKit");
-      if (polling_client.AsyncGET() < 0) {
-        // 切断
-        polling_client.end();
+      int erc = 0;
+      unsigned long time0 = millis();
+      if (time0 - close_time > POLLING_INTERVAL) {
+        Serial.print(time0);
+        Serial.println("\t: polling begin");
+        polling_client.setUserAgent("IRKit");
+        polling_client.begin(url);
+        polling_client.setTimeout(50 * 1000);
+        if (erc = polling_client.AsyncGET() < 0) {
+          // 切断
+          Serial.print(millis());
+          Serial.print("\t: connect error code=");
+          Serial.println(erc);
+          polling_client.end();
+          // 次回接続用に時間を記録
+          close_time = millis();
+        }
       }
     }
 
@@ -592,4 +613,3 @@ void loop() {
     ;
   }
 }
-
